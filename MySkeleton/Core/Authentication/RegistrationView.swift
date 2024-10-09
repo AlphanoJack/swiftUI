@@ -16,6 +16,7 @@ struct RegistrationView: View {
     @State private var age: String = ""
     
     @State private var currentStep: RegistrationStep = .email
+    @State private var showNextField: Bool = false
     
     enum RegistrationStep: Int, CaseIterable {
         case email = 0, name, nickname, age, password, passwordConfirm
@@ -34,8 +35,10 @@ struct RegistrationView: View {
                 ScrollView {
                     VStack(spacing: 24) {
                         ForEach(RegistrationStep.allCases.reversed(), id: \.self) { step in
-                            if currentStep.rawValue >= step.rawValue {
+                            if step.rawValue <= currentStep.rawValue {
                                 inputField(for: step)
+                                    .transition(.opacity)
+                                    .animation(.easeInOut(duration: 0.5), value: currentStep)
                             }
                         }
                     }
@@ -55,6 +58,7 @@ struct RegistrationView: View {
         case .email:
             InputView(text: $email, title: "Email Address", placeholder: "name@example.com")
                 .autocapitalization(.none)
+                .keyboardType(.emailAddress)
         case .name:
             InputView(text: $name, title: "Name", placeholder: "홍길동")
                 .autocapitalization(.none)
@@ -64,6 +68,8 @@ struct RegistrationView: View {
         case .age:
             InputView(text: $age, title: "Age", placeholder: "20")
                 .autocapitalization(.none)
+                .keyboardType(.numberPad)
+                
         case .password:
             InputView(text: $password, title: "Password", placeholder: "password", isSecureField: true)
         case .passwordConfirm:
@@ -72,19 +78,31 @@ struct RegistrationView: View {
     }
     
     private func updateCurrentStep() {
+        let nextStep: RegistrationStep?
+        
         switch currentStep {
         case .email where !email.isEmpty:
-            currentStep = .name
+            nextStep = .name
         case .name where !name.isEmpty:
-            currentStep = .nickname
+            nextStep = .nickname
         case .nickname where !nickname.isEmpty:
-            currentStep = .age
+            nextStep = .age
         case .age where !age.isEmpty:
-            currentStep = .password
+            nextStep = .password
         case .password where !password.isEmpty:
-            currentStep = .passwordConfirm
+            nextStep = .passwordConfirm
+        case .passwordConfirm:
+            nextStep = nil
         default:
-            break
+            return
+        }
+        
+        if let nextStep = nextStep, nextStep != currentStep {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                withAnimation {
+                    currentStep = nextStep
+                }
+            }
         }
     }
 }
