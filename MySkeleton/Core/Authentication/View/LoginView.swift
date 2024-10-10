@@ -11,6 +11,8 @@ struct LoginView: View {
     
     @State private var email = ""
     @State private var password = ""
+    @EnvironmentObject var authController: AuthController
+    
     var body: some View {
         NavigationStack {
             VStack {
@@ -37,28 +39,23 @@ struct LoginView: View {
                 
                 //sign in button
                 
-                Button {
-                    print("LoginView, Log user in ...")
-                } label: {
-                    HStack {
-                        Text("Sign In")
-                            .fontWeight(.semibold)
-                        Image(systemName: "arrow.right")
+                SignUPAndINButtonView(buttonLabel: "Sign In") {
+                    do {
+                        try await authController.signIn(withEmail: email, password: password)
+                    } catch {
+                        print("Error sign in: \(error.localizedDescription)")
                     }
-                    .foregroundStyle(.white)
-                    .frame(width: UIScreen.main.bounds.width - 32, height: 48)
                 }
-                .background(Color(.systemBlue)
-                    .cornerRadius(10)
-                )
-                .padding(.top, 24)
+                .disabled(!formIsValid)
+                .opacity(formIsValid ? 1 : 0.5)
                 
                 Spacer()
                 
                 //sign up button
                 
                 NavigationLink{
-                    
+                    RegistrationView()
+                        .navigationBarBackButtonHidden(true)
                 } label: {
                     HStack(spacing: 4) {
                         Text("Don'have an accont?")
@@ -69,6 +66,17 @@ struct LoginView: View {
                 }
             }
         }
+    }
+}
+
+
+// formField 유효성 검사 
+extension LoginView: AuthenticationFormProtocol {
+    var formIsValid: Bool {
+        return !email.isEmpty
+        && email.contains("@")
+        && !password.isEmpty
+        && password.count >= 8
     }
 }
 

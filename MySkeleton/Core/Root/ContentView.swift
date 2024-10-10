@@ -8,13 +8,18 @@
 import SwiftUI
 
 struct ContentView: View {
+    
+    @EnvironmentObject var authController: AuthController
+    
     var body: some View {
-        VStack {
-            RegistrationView()
+        Group {
+            if authController.userSession != nil {
+                ProfileView()
+            } else {
+                LoginView()
+            }
         }
     }
 }
 
-#Preview {
-    ContentView()
-}
+
