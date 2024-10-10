@@ -13,23 +13,28 @@ struct RegistrationView: View {
     @State private var passwordConfirm: String = ""
     @State private var name: String = ""
     @State private var nickname: String = ""
-    @State private var age: String = ""
     
     @State private var currentStep: RegistrationStep = .email
     @State private var showNextField: Bool = false
+    @Environment(\.dismiss) var dismiss
+    @EnvironmentObject var authController: AuthController
     
     enum RegistrationStep: Int, CaseIterable {
-        case email = 0, name, nickname, age, password, passwordConfirm
+        case email = 0, name, nickname, password, passwordConfirm, complete
     }
     
     var body: some View {
         VStack {
+            
             // image
+            
             Image("kimberry-logo")
                 .resizable()
                 .scaledToFill()
                 .frame(width: 150, height: 100)
                 .padding(.vertical, 32)
+            
+            // Sign Up Input Fields
             
             VStack(spacing: 24) {
                 ScrollView {
@@ -46,8 +51,21 @@ struct RegistrationView: View {
                 .padding(.horizontal)
                 .padding(.top, 12)
             }
+            
+            Spacer()
+            // Back to Login View
+            Button{
+                dismiss()
+            } label: {
+                HStack(spacing: 4) {
+                    Text("Already have an account?")
+                    Text("Sign In")
+                        .fontWeight(.bold)
+                }
+                .font(.system(size: 14))
+            }
         }
-        .onChange(of: [email, name, nickname, age, password, passwordConfirm]) { _, _ in
+        .onChange(of: [email, name, nickname, password, passwordConfirm]) { _, _ in
             updateCurrentStep()
         }
     }
@@ -65,15 +83,21 @@ struct RegistrationView: View {
         case .nickname:
             InputView(text: $nickname, title: "Nickname", placeholder: "상큼한 고양이")
                 .autocapitalization(.none)
-        case .age:
-            InputView(text: $age, title: "Age", placeholder: "20")
-                .autocapitalization(.none)
-                .keyboardType(.numberPad)
                 
         case .password:
             InputView(text: $password, title: "Password", placeholder: "password", isSecureField: true)
         case .passwordConfirm:
             InputView(text: $passwordConfirm, title: "Password Confirm", placeholder: "password confirm", isSecureField: true)
+        case .complete:
+            SignUPAndINButtonView(buttonLabel: "Sign UP") {
+                do {
+                    try await authController.createUser(withEmail: email, password: password, name: name, nickname: nickname)
+                } catch {
+                    print("\(email) 회원가입 실패: \(error)")
+                }
+            }
+            .disabled(!formIsValid)
+            .opacity(formIsValid ? 1 : 0.3)
         }
     }
     
@@ -86,13 +110,14 @@ struct RegistrationView: View {
         case .name where !name.isEmpty:
             nextStep = .nickname
         case .nickname where !nickname.isEmpty:
-            nextStep = .age
-        case .age where !age.isEmpty:
             nextStep = .password
         case .password where !password.isEmpty:
             nextStep = .passwordConfirm
         case .passwordConfirm:
+            nextStep = .complete
+        case .complete:
             nextStep = nil
+        
         default:
             return
         }
@@ -104,6 +129,20 @@ struct RegistrationView: View {
                 }
             }
         }
+    }
+}
+
+extension RegistrationView: AuthenticationFormProtocol {
+    var formIsValid: Bool {
+        return !email.isEmpty
+        && email.contains("@")
+        && !name.isEmpty
+        && name.count > 4
+        && !nickname.isEmpty
+        && nickname.count > 4
+        && !password.isEmpty
+        && password.count > 8
+        && password == passwordConfirm
     }
 }
 
